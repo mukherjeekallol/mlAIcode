@@ -1,0 +1,43 @@
+{
+    "expenses": [
+        {
+            "amount": 10.0,
+            "category": "Food",
+            "description": "10",
+            "date": "2025-06-13"
+        },
+        {
+            "amount": 20.0,
+            "category": "Entertainment",
+            "description": "cinema",
+            "date": "2025-06-12"
+        },
+        {
+            "amount": 200.0,
+            "category": "Shopping",
+            "description": "shopping",
+            "date": "2025-06-13"
+        },
+        {
+            "amount": 2500.0,
+            "category": "Housing",
+            "description": "mortgage",
+            "date": "2025-06-02"
+        }
+    ],
+    "monthly_budget": {
+        "Food": 200.0,
+        "Transportation": 100.0,
+        "Entertainment": 100.0
+    },
+    "categories": {
+        "Food": 10.0,
+        "Transportation": 0.0,
+        "Housing": 2500.0,
+        "Entertainment": 20.0,
+        "Utilities": 0.0,
+        "Shopping": 200.0,
+        "Healthcare": 0.0,
+        "Other": 0.0
+    }
+}

@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Add Expense Form -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>Add New Expense
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_expense') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Amount ($)</label>
+                        <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category" required>
+                            {% for category in categories %}
+                            <option value="{{ category }}">{{ category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="description" name="description" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" name="date">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save me-2"></i>Save Expense
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Set Budget Form -->
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Set Monthly Budget
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('set_budget') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="budget_category" class="form-label">Category</label>
+                        <select class="form-select" id="budget_category" name="category" required>
+                            {% for category in categories %}
+                            <option value="{{ category }}">{{ category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="budget_amount" class="form-label">Budget Amount ($)</label>
+                        <input type="number" step="0.01" class="form-control" id="budget_amount" name="amount" required>
+                    </div>
+                    <button type="submit" class="btn btn-info text-white w-100">
+                        <i class="fas fa-save me-2"></i>Set Budget
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense List and Summary -->
+    <div class="col-md-8">
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2">Total Spending</h6>
+                        <h2 class="card-title mb-0" id="total-spending">$0.00</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card summary-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2">Monthly Average</h6>
+                        <h2 class="card-title mb-0" id="monthly-average">$0.00</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Spending by Category</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Monthly Trend</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense List -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Recent Expenses</h5>
+            </div>
+            <div class="card-body">
+                <div id="expense-list">
+                    {% for expense in expenses|sort(attribute='date', reverse=true) %}
+                    <div class="expense-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ expense.description }}</h6>
+                                <small class="text-muted">
+                                    {{ expense.date }} | {{ expense.category }}
+                                </small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="me-3">${{ "%.2f"|format(expense.amount) }}</span>
+                                <form action="{{ url_for('delete_expense', index=loop.index0) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this expense?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No expenses recorded yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch summary data
+    fetch('/get_summary')
+        .then(response => response.json())
+        .then(data => {
+            updateSummary(data);
+            createCharts(data);
+        });
+
+    function updateSummary(data) {
+        const totalSpending = data.total_spending;
+        const monthlySummary = data.monthly_summary;
+        const months = Object.keys(monthlySummary);
+        
+        document.getElementById('total-spending').textContent = 
+            `$${totalSpending.toFixed(2)}`;
+        
+        const monthlyAverage = months.length > 0 
+            ? totalSpending / months.length 
+            : 0;
+        document.getElementById('monthly-average').textContent = 
+            `$${monthlyAverage.toFixed(2)}`;
+    }
+
+    function createCharts(data) {
+        // Category Chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(data.category_spending),
+                datasets: [{
+                    data: Object.values(data.category_spending),
+                    backgroundColor: [
+                        '#2ecc71', '#3498db', '#9b59b6', '#e74c3c',
+                        '#f1c40f', '#1abc9c', '#e67e22', '#34495e'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+
+        // Trend Chart
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        const monthlyData = data.monthly_summary;
+        const months = Object.keys(monthlyData).sort();
+        const totals = months.map(month => monthlyData[month].total);
+
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Monthly Spending',
+                    data: totals,
+                    borderColor: '#3498db',
+                    tension: 0.1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => '$' + value
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %} 
